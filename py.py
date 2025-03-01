@@ -1,3 +1,7 @@
+#RIYAN SANDI PRAYOGA
+#123140176
+#PBO RD->RC 
+
 file = open("Me.txt", "w")
 
 tulis = input("\nmasukan nama : ")
