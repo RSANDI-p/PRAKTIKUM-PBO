@@ -1,0 +1,134 @@
+import tkinter as tk
+from tkinter import messagebox
+from datetime import datetime
+
+class CatatanHarianApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Catatan Harian")
+        self.catatan = {}
+
+        self.buat_menu()
+        self.buat_widgets()
+        self.muat_catatan()
+
+    def buat_menu(self):
+        menu_bar = tk.Menu(self.root)
+        file_menu = tk.Menu(menu_bar, tearoff=0)
+        file_menu.add_command(label="Simpan", command=self.simpan_catatan)
+        file_menu.add_command(label="Keluar", command=self.root.quit)
+        menu_bar.add_cascade(label="File", menu=file_menu)
+
+        bantuan_menu = tk.Menu(menu_bar, tearoff=0)
+        bantuan_menu.add_command(label="Tentang", command=lambda: messagebox.showinfo("Tentang", "Catatan Harian v1.0\nBy Sandi"))
+        menu_bar.add_cascade(label="Bantuan", menu=bantuan_menu)
+
+        self.root.config(menu=menu_bar)
+
+    def buat_widgets(self):
+        tk.Label(self.root, text="Judul:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        self.judul_entry = tk.Entry(self.root, width=40)
+        self.judul_entry.grid(row=0, column=1, columnspan=2, sticky="ew", padx=5)
+
+        self.baru_btn = tk.Button(self.root, text="Catatan Baru", command=self.buat_catatan_baru)
+        self.baru_btn.grid(row=1, column=0, sticky="ew", padx=5)
+
+        self.tambah_btn = tk.Button(self.root, text="Simpan Catatan", command=self.tambah_catatan)
+        self.tambah_btn.grid(row=1, column=1, sticky="ew", padx=5)
+
+        self.hapus_btn = tk.Button(self.root, text="Hapus Catatan", command=self.hapus_catatan)
+        self.hapus_btn.grid(row=1, column=2, sticky="ew", padx=5)
+
+        self.listbox = tk.Listbox(self.root, height=15)
+        self.listbox.grid(row=2, column=0, rowspan=2, sticky="nsew", padx=(5, 0), pady=5)
+        self.listbox.bind("<<ListboxSelect>>", self.tampilkan_isi)
+
+        scrollbar = tk.Scrollbar(self.root, orient="vertical", command=self.listbox.yview)
+        scrollbar.grid(row=2, column=1, sticky="nsw", pady=5)
+        self.listbox.config(yscrollcommand=scrollbar.set)
+
+        self.isi_text = tk.Text(self.root, wrap="word", height=15)
+        self.isi_text.grid(row=2, column=2, sticky="nsew", padx=(0, 5), pady=5)
+        self.isi_text.config(state="disabled")
+
+        self.root.grid_columnconfigure(2, weight=1)
+        self.root.grid_rowconfigure(2, weight=1)
+
+    def buat_catatan_baru(self):
+        self.judul_entry.delete(0, tk.END)
+        self.isi_text.config(state="normal")
+        self.isi_text.delete("1.0", tk.END)
+
+    def tambah_catatan(self):
+        judul = self.judul_entry.get().strip()
+        isi = self.isi_text.get("1.0", tk.END).strip()
+
+        if not judul or not isi:
+            messagebox.showerror("Error", "Judul dan isi catatan tidak boleh kosong!")
+            return
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+        tampil_judul = f"{judul} ({timestamp})"
+
+        self.catatan[tampil_judul] = (isi, timestamp)
+        self.listbox.insert(tk.END, tampil_judul)
+
+        self.judul_entry.delete(0, tk.END)
+        self.isi_text.delete("1.0", tk.END)
+        self.isi_text.config(state="disabled")
+
+    def hapus_catatan(self):
+        selected = self.listbox.curselection()
+        if not selected:
+            messagebox.showerror("Error", "Pilih catatan yang ingin dihapus!")
+            return
+
+        index = selected[0]
+        judul = self.listbox.get(index)
+
+        if messagebox.askyesno("Konfirmasi", f"Yakin ingin menghapus catatan '{judul}'?"):
+            self.listbox.delete(index)
+            del self.catatan[judul]
+            self.isi_text.config(state="normal")
+            self.isi_text.delete("1.0", tk.END)
+            self.isi_text.config(state="disabled")
+
+    def tampilkan_isi(self, event):
+        selected = self.listbox.curselection()
+        if not selected:
+            return
+
+        index = selected[0]
+        judul = self.listbox.get(index)
+        isi, _ = self.catatan[judul]
+
+        self.isi_text.config(state="normal")
+        self.isi_text.delete("1.0", tk.END)
+        self.isi_text.insert(tk.END, isi)
+        self.isi_text.config(state="disabled")
+
+    def simpan_catatan(self):
+        with open("catatan.txt", "w") as file:
+            for judul, (isi, timestamp) in self.catatan.items():
+                original_judul = judul.rsplit(" (", 1)[0]
+                file.write(f"{original_judul}\n{isi}\n{timestamp}\n")
+
+    def muat_catatan(self):
+        try:
+            with open("catatan.txt", "r") as file:
+                lines = file.readlines()
+                for i in range(0, len(lines), 3):
+                    judul = lines[i].strip()
+                    isi = lines[i + 1].strip()
+                    timestamp = lines[i + 2].strip()
+                    tampil_judul = f"{judul} ({timestamp})"
+                    self.catatan[tampil_judul] = (isi, timestamp)
+                    self.listbox.insert(tk.END, tampil_judul)
+        except FileNotFoundError:
+            pass
+
+# Jalankan aplikasi
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = CatatanHarianApp(root)
+    root.mainloop()
